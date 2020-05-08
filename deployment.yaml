@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: streamer
+  name: streamer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: streamer
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: streamer
+    spec:
+      containers:
+      - name: streamer
+        image: streamer:test
+        ports:
+        - containerPort: 9000
+        env:
+        - name: KAFKA_URI
+          value: "oisp-kafka-headless:9092"
+        - name: WSS_PORT
+          value: "9000"
