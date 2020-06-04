@@ -3,9 +3,10 @@ const validator = require('validator');
 const WebSocket = require('ws');
 const {Kafka} = require('kafkajs');
 const uuid = require('uuid');
+const config = require('./config.js');
 
-var KAFKA_URI = process.env.KAFKA_URI;
-var WSS_PORT = process.env.WSS_PORT;
+const KAFKA_URI = config.kafka.uri;
+const WSS_PORT = config.streamer.port;
 
 var keycloak = new Keycloak({});
 const kafka = new Kafka({
@@ -71,9 +72,8 @@ wss.on('connection', function connection(ws) {
 	    }
 	    if (accounts.includes(acc)) {
 		const topic = "metrics." + accComp.join(".");
-		// TODO clear group
 		// TODO clear timing (only from now/last minute etc.)
-		var newConsumer = kafka.consumer({groupId: "other-group"});
+		var newConsumer = kafka.consumer({groupId: uuid.v4()});
 		newConsumer.connect();
 		newConsumer.subscribe({topic: topic, fromBeginning:false});
 		wsKafkaConsumers[ws.id].push(newConsumer);
