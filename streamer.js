@@ -77,7 +77,6 @@ wss.on('connection', function connection(ws) {
 		    ws.disconnect();
 		}
 		if (accounts.some((a) => {return a.id === acc})) {
-		    c
 		    // TODO clear timing (only from now/last minute etc.)
 		    var newConsumer = kafka.consumer({groupId: uuid.v4()});
 		    newConsumer.connect();
