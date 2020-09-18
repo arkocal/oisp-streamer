@@ -33,7 +33,7 @@ spec:
     spec:
       containers:
       - name: streamer
-        image: streamer:test
+        image: arkocal/oisp-streamer
         ports:
         - containerPort: 9000
         env:

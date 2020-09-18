@@ -13,12 +13,13 @@ const kafka = new Kafka({
     brokers: [KAFKA_URI]
 })
 
-function getAccessibleAccounts(rawToken) {
+async function getAccessibleAccounts(rawToken) {
     var grantData = {
 	access_token: rawToken
     };
     console.log("raw token:" + rawToken);
     return keycloak.grantManager.createGrant(grantData).then(grant => {
+	console.log(grant.access_token);
 	return grant.access_token.content.accounts;
     }).catch(err => {
 	console.log("caught error:" + err);
@@ -60,31 +61,38 @@ wss.on('connection', function connection(ws) {
 	disconnectAll(ws.id);
 	wsKafkaConsumers[ws.id] = [];
 	const messageJson = JSON.parse(message);
-	accounts = getAccessibleAccounts(messageJson.token);
-
-	messageJson.components.forEach( function (accComp) {
-	    const acc = accComp[0];
-	    const comp = accComp[1];
-	    if (!(validator.isUUID(acc) && validator.isUUID(comp))) {
-		// TODO write down protocol
-		ws.send('Invalid Input');
-		console.log("Actually VERY SERIOUS PROBLEM, allowing for dev");
-	    }
-	    if (accounts.includes(acc)) {
-		const topic = "metrics." + accComp.join(".");
-		// TODO clear timing (only from now/last minute etc.)
-		var newConsumer = kafka.consumer({groupId: uuid.v4()});
-		newConsumer.connect();
-		newConsumer.subscribe({topic: topic, fromBeginning:false});
-		wsKafkaConsumers[ws.id].push(newConsumer);
-		run(ws, newConsumer);
-	    }
-	    else {
-		ws.send('Invalid Token For Account ' + acc);
-	    }
+	const servicePrefix = messageJson.service + "";
+	if (!validator.isAlphanumeric(servicePrefix) || validator.isEmpty(servicePrefix)) {
+	    ws.send('Invalid Input');
+	    ws.disconnect();
+	}
+	getAccessibleAccounts(messageJson.token).then((accounts) => {
+	    console.log("Accounts:" + accounts)
+	    messageJson.components.forEach( function (accComp) {
+		const acc = accComp[0];
+		const comp = accComp[1];
+		if (!(validator.isUUID(acc) && validator.isUUID(comp))) {
+		    // TODO write down protocol
+		    ws.send('Invalid Input');
+		    ws.disconnect();
+		}
+		if (accounts.some((a) => {return a.id === acc})) {
+		    c
+		    // TODO clear timing (only from now/last minute etc.)
+		    var newConsumer = kafka.consumer({groupId: uuid.v4()});
+		    newConsumer.connect();
+		    newConsumer.subscribe({topic: topic, fromBeginning:false});
+		    wsKafkaConsumers[ws.id].push(newConsumer);
+		    run(ws, newConsumer);
+		}
+		else {
+		    ws.send('Invalid Token For Account ' + acc);
+		    ws.disconnect();
+		}
+	    });
+	    // TODO write down protocol
+	    ws.send('OK');
 	});
-	// TODO write down protocol
-	ws.send('OK');
     });
     ws.on('close', function () {
 	disconnectAll(ws.id);
